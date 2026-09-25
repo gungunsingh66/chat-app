@@ -17,7 +17,7 @@ function Sidebar() {
 
     useEffect(() => {
         getUsers()
-    }, [onlineUsers])
+    }, [])
 
   return (
     <div className={`bg-[#8185B2]/10 h-full p-5 rounded-r-xl overflow-y-scroll text-white ${selectedUser ? "max-md:hidden" :  ''}`}>
@@ -45,7 +45,7 @@ function Sidebar() {
         {filteredUser.map((user, index) => (
             <div onClick={() => {setSelectedUser(user); setUnseenMessages(prev => ({...prev, [user._id] :  0}))}}
             key={user._id} className={`relative flex items-center gap-2 p-2 pl-1 rounded cursor-pointer max-sm:text-sm ${selectedUser?._id === user._id && 'bg-[#282142]/50'}`}>
-                <img src= {user?.profile?.pic || assets.avatar_icon} alt="" className='w-[35px] aspect-[1/1] rounded-full'/>
+                <img src= {user?.profilePic || assets.avatar_icon} alt="" className='w-[35px] aspect-[1/1] rounded-full'/>
                 <div className='flex flex-col leading-tight'>
                     <p>{user.fullName}</p>
                     {
