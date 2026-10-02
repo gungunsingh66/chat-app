@@ -1,5 +1,4 @@
 import {
-  Children,
   createContext,
   useContext,
   useEffect,
@@ -14,6 +13,9 @@ export const ChatProvider = ({ children }) => {
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [unseenMessages, setUnseenMessages] = useState({});
 
   const { socket, axios } = useContext(AuthContext);
@@ -79,14 +81,60 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  // function to subscribe to messages for selected user
-  const subscribeToMessages = () => {
+  const getGroups = async () => {
+    try {
+      const { data } = await axios.get("/api/groups");
+
+      if (data.success) {
+        setGroups(data.groups);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const getGroupMessages = async (groupId) => {
+    try {
+      const { data } = await axios.get(`/api/messages/group/${groupId}`);
+
+      if (data.success) {
+        setMessages(data.messages);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const sendGroupMessage = async (messageData) => {
+    try {
+      const { data } = await axios.post(
+        `/api/messages/group/send/${selectedGroup._id}`,
+        messageData,
+      );
+
+      if (data.success) {
+        // Don't add here if socket will also deliver it
+        // Otherwise you'll see duplicate messages.
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  // Subscribe to private messages
+  useEffect(() => {
     if (!socket) return;
 
-    socket.on("newMessage", (newMessage) => {
+    const handleNewMessage = (newMessage) => {
       if (selectedUser && newMessage.senderId === selectedUser._id) {
         newMessage.seen = true;
+
         setMessages((prevMessages) => [...prevMessages, newMessage]);
+
         axios.put(`/api/messages/mark/${newMessage.senderId}`);
       } else {
         setUnseenMessages((prevUnseenMessages) => ({
@@ -96,30 +144,69 @@ export const ChatProvider = ({ children }) => {
             : 1,
         }));
       }
-    });
-  };
+    };
 
-  // function to unsubscribe from messages
-  const unsubscribeFromMessage = () => {
-    if (socket) socket.off("newMessage");
-  };
+    socket.on("newMessage", handleNewMessage);
 
-  useEffect(() => {
-    subscribeToMessages();
-    return () => unsubscribeFromMessage();
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
   }, [socket, selectedUser]);
+
+  // Subscribe to group messages
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewGroupMessage = (newMessage) => {
+      if (selectedGroup && newMessage.groupId === selectedGroup._id) {
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+      }
+    };
+
+    socket.on("newGroupMessage", handleNewGroupMessage);
+
+    return () => {
+      socket.off("newGroupMessage", handleNewGroupMessage);
+    };
+  }, [socket, selectedGroup]);
+
+  // Join selected group
+  useEffect(() => {
+    if (!socket || !selectedGroup) return;
+
+    socket.emit("joinGroup", selectedGroup._id);
+
+    return () => {
+      socket.emit("leaveGroup", selectedGroup._id);
+    };
+  }, [socket, selectedGroup]);
 
   const value = {
     messages,
+
     users,
     selectedUser,
-    getUsers,
-    setMessages,
-    sendMessage,
-    setSelectedUser,
+
+    groups,
+    selectedGroup,
+
     unseenMessages,
-    setUnseenMessages,
+
+    getUsers,
     getMessages,
+
+    getGroups,
+    getGroupMessages,
+
+    sendMessage,
+    sendGroupMessage,
+
+    setMessages,
+
+    setSelectedUser,
+    setSelectedGroup,
+
+    setUnseenMessages,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

@@ -6,6 +6,7 @@ import { log } from "console";
 import { connectDB } from "./lib/db.js";
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
+import groupRouter from "./routes/groupRoutes.js";
 import { Server } from "socket.io";
 
 //Create Express app and Http Server
@@ -40,6 +41,52 @@ io.on("connection", (socket) => {
   });
 });
 
+//function to handle group join and leave events
+io.on("connection", (socket) => {
+
+  const userId = socket.handshake.query.userId;
+
+  console.log("User Connected", userId);
+
+  if (userId) {
+    userSocketMap[userId] = socket.id;
+  }
+
+  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  socket.on("joinGroup", (groupId) => {
+    socket.join(`group:${groupId}`);
+
+    console.log(
+      `User ${userId} joined group ${groupId}`
+    );
+  });
+
+  socket.on("leaveGroup", (groupId) => {
+    socket.leave(`group:${groupId}`);
+
+    console.log(
+      `User ${userId} left group ${groupId}`
+    );
+  });
+
+  socket.on("disconnect", () => {
+
+    if (
+      userId &&
+      userSocketMap[userId] === socket.id
+    ) {
+      delete userSocketMap[userId];
+    }
+
+    io.emit(
+      "getOnlineUsers",
+      Object.keys(userSocketMap)
+    );
+  });
+
+});
+
 //Middleware setup
 app.use(express.json({ limit: "4mb" }));
 app.use(cors());
@@ -48,6 +95,7 @@ app.use(cors());
 app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRouter);
+app.use("/api/groups", groupRouter);
 
 //connect to mongodb
 await connectDB();

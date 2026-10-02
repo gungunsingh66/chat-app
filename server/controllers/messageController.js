@@ -2,6 +2,7 @@ import Message from "../models/message.js";
 import User from "../models/User.js";
 import cloudinary from "../lib/cloudinary.js";
 import { io, userSocketMap } from "../server.js";
+import Group from "../models/Group.js";
 
 //get all user except the logged in user
 export const getUsersForSidebar = async (req, res) => {
@@ -113,5 +114,123 @@ export const sendMessage = async (req, res) => {
   } catch (error) {
     console.log(error.message);
     res.json({ success: false, message: error.message });
+  }
+};
+
+export const sendGroupMessage = async (req, res) => {
+  try {
+    const { text, image } = req.body;
+
+    const { groupId } = req.params;
+
+    const senderId = req.user._id;
+
+    const group = await Group.findById(groupId);
+
+    if (!group) {
+      return res.json({
+        success: false,
+        message: "Group not found",
+      });
+    }
+
+    const isMember = group.members.some(
+      (member) => member.toString() === senderId.toString()
+    );
+
+    if (!isMember) {
+      return res.json({
+        success: false,
+        message: "You are not a member of this group",
+      });
+    }
+
+    let imageUrl;
+
+    if (image) {
+      const uploadResponse =
+        await cloudinary.uploader.upload(image);
+
+      imageUrl = uploadResponse.secure_url;
+    }
+
+    const newMessage = await Message.create({
+      senderId,
+      groupId,
+      text,
+      image: imageUrl,
+    });
+
+    const populatedMessage = await Message.findById(
+      newMessage._id
+    ).populate("senderId", "-password");
+
+    // Send to everyone in group
+    io.to(`group:${groupId}`).emit(
+      "newGroupMessage",
+      populatedMessage
+    );
+
+    res.json({
+      success: true,
+      newMessage: populatedMessage,
+    });
+
+  } catch (error) {
+
+    console.log(error.message);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getGroupMessages = async (req, res) => {
+  try {
+
+    const { groupId } = req.params;
+
+    const userId = req.user._id;
+
+    const group = await Group.findById(groupId);
+
+    if (!group) {
+      return res.json({
+        success: false,
+        message: "Group not found",
+      });
+    }
+
+    const isMember = group.members.some(
+      (member) => member.toString() === userId.toString()
+    );
+
+    if (!isMember) {
+      return res.json({
+        success: false,
+        message: "You are not a member of this group",
+      });
+    }
+
+    const messages = await Message.find({
+      groupId,
+    })
+      .populate("senderId", "-password")
+      .sort({ createdAt: 1 });
+
+    res.json({
+      success: true,
+      messages,
+    });
+
+  } catch (error) {
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+
   }
 };
