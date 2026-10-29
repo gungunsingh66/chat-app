@@ -22,8 +22,7 @@ QuickChat combines a responsive React interface with a Node.js and Express backe
 | Resource | Link |
 |---|---|
 | 💻 Source Code | [View on GitHub](https://github.com/gungunsingh66/chat-app) |
-| 🌐 Live Application | [Open QuickChat](chat-app-chi-nine-20.vercel.app) |
-| ⚙️ Backend API | [Backend on Render](https://chat-app-a3n0.onrender.com) |
+| 🌐 Live Application | [Open QuickChat](https://chat-app-chi-nine-20.vercel.app/)
 
 ---
 
