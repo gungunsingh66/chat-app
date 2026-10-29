@@ -25,8 +25,6 @@ QuickChat combines a responsive React interface with a Node.js and Express backe
 | 🌐 Live Application | [Open QuickChat](chat-app-chi-nine-20.vercel.app) |
 | ⚙️ Backend API | [Backend on Render](https://chat-app-a3n0.onrender.com) |
 
-> **Note:** Replace the frontend placeholder with your actual Vercel URL. If the backend URL does not expose a public homepage, that is normal; use a health-check endpoint if your application provides one.
-
 ---
 
 ## ✨ Key Features
